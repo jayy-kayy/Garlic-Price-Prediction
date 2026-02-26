@@ -1,0 +1,96 @@
+# prompt: give me code for hybroid model of random forest and lstm
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
+
+
+# Assuming you have loaded your data into a pandas DataFrame called 'df'
+# and you have defined your features and target variable
+
+# Define target and features
+TARGET = "Modal Price"
+FEATURES = [col for col in df.columns if col not in [TARGET, "Price Date"]]
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(df[FEATURES], df[TARGET], test_size=0.2, random_state=42)
+
+# Scale data for LSTM
+scaler_X = MinMaxScaler()
+scaler_y = MinMaxScaler()
+X_train_scaled = scaler_X.fit_transform(X_train)
+X_test_scaled = scaler_X.transform(X_test)
+y_train_scaled = scaler_y.fit_transform(y_train.values.reshape(-1, 1))
+y_test_scaled = scaler_y.transform(y_test.values.reshape(-1, 1))
+
+# Reshape for LSTM input (samples, timesteps, features)
+X_train_lstm = X_train_scaled.reshape((X_train_scaled.shape[0], 1, X_train_scaled.shape[1]))
+X_test_lstm = X_test_scaled.reshape((X_test_scaled.shape[0], 1, X_test_scaled.shape[1]))
+
+# Random Forest Model
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# LSTM Model
+lstm_model = Sequential()
+lstm_model.add(LSTM(50, activation='relu', input_shape=(X_train_lstm.shape[1], X_train_lstm.shape[2])))
+lstm_model.add(Dense(1))
+lstm_model.compile(optimizer='adam', loss='mse')
+
+# Train LSTM Model with early stopping
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+lstm_model.fit(X_train_lstm, y_train_scaled, epochs=100, batch_size=32, validation_split=0.2, callbacks=[early_stopping])
+
+
+# Predictions and Evaluation Metrics
+
+# Random Forest Predictions and Evaluation
+rf_predictions = rf_model.predict(X_test)
+rf_r2 = r2_score(y_test, rf_predictions)
+rf_mae = mean_absolute_error(y_test, rf_predictions)
+rf_mse = mean_squared_error(y_test, rf_predictions)
+rf_rmse = np.sqrt(rf_mse)
+
+print("Random Forest Evaluation Metrics:")
+print(f"R²: {rf_r2}")
+print(f"MAE: {rf_mae}")
+print(f"MSE: {rf_mse}")
+print(f"RMSE: {rf_rmse}")
+
+# LSTM Predictions and Evaluation
+lstm_predictions_scaled = lstm_model.predict(X_test_lstm)
+lstm_predictions = scaler_y.inverse_transform(lstm_predictions_scaled)
+
+lstm_r2 = r2_score(y_test, lstm_predictions)
+lstm_mae = mean_absolute_error(y_test, lstm_predictions)
+lstm_mse = mean_squared_error(y_test, lstm_predictions)
+lstm_rmse = np.sqrt(lstm_mse)
+
+print("\nLSTM Evaluation Metrics:")
+print(f"R²: {lstm_r2}")
+print(f"MAE: {lstm_mae}")
+print(f"MSE: {lstm_mse}")
+print(f"RMSE: {lstm_rmse}")
+
+# Hybrid Model (Weighted Average of Predictions)
+# You can adjust the weights based on your model performance
+rf_weight = 0.6
+lstm_weight = 0.4
+hybrid_predictions = (rf_weight * rf_predictions + lstm_weight * lstm_predictions.flatten())
+
+hybrid_r2 = r2_score(y_test, hybrid_predictions)
+hybrid_mae = mean_absolute_error(y_test, hybrid_predictions)
+hybrid_mse = mean_squared_error(y_test, hybrid_predictions)
+hybrid_rmse = np.sqrt(hybrid_mse)
+
+print("\nHybrid Model Evaluation Metrics:")
+print(f"R²: {hybrid_r2}")
+print(f"MAE: {hybrid_mae}")
+print(f"MSE: {hybrid_mse}")
+print(f"RMSE: {hybrid_rmse}")

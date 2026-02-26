@@ -1,0 +1,52 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load datasets
+crop_data_path = "/content/Crop_Recommendation.csv"
+rainfall_data_path = "/content/Monthly_Rainfall_From_1901_to_2017.csv"
+
+crop_data = pd.read_csv(crop_data_path)
+rainfall_data = pd.read_csv(rainfall_data_path)
+
+# Remove unnecessary columns
+rainfall_data = rainfall_data.drop(columns=['Unnamed: 0', 'YEAR'])
+
+# Compute the average monthly rainfall for each state
+avg_rainfall_per_state = rainfall_data.groupby('States/UTs').mean()
+
+# Store crop recommendations for all states and months
+crop_recommendations = {}
+
+for state in avg_rainfall_per_state.index:
+    crop_recommendations[state] = {}
+    for month in avg_rainfall_per_state.columns:
+        avg_rainfall = avg_rainfall_per_state.loc[state, month]
+        recommended_crops = crop_data[crop_data['Rainfall'] <= avg_rainfall]['Crop'].unique()
+        crop_recommendations[state][month] = list(recommended_crops)
+
+# Convert to DataFrame
+recommendation_df = pd.DataFrame(crop_recommendations).T
+
+# Prepare data for heatmap (count of recommended crops per state-month)
+heatmap_data = recommendation_df.applymap(len)
+
+plt.figure(figsize=(15, 8))
+sns.heatmap(heatmap_data, cmap="Blues", annot=True, fmt="d", linewidths=0.5)
+plt.xlabel("Month")
+plt.ylabel("State/UT")
+plt.title("Number of Recommended Crops per State and Month")
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+plt.show()
+
+# Prepare data for most recommended crops (overall frequency)
+all_recommended_crops = sum(recommendation_df.values.flatten(), [])  # Flatten and combine all lists
+crop_counts = pd.Series(all_recommended_crops).value_counts()
+
+# Pie chart for most frequently recommended crops
+plt.figure(figsize=(10, 6))
+crop_counts[:10].plot(kind='pie', autopct='%1.1f%%', cmap="viridis", wedgeprops={'edgecolor': 'black'})
+plt.ylabel("")
+plt.title("Top 10 Most Frequently Recommended Crops")
+plt.show()

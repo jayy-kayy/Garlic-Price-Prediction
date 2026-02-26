@@ -1,0 +1,36 @@
+from sklearn.metrics import r2_score
+
+# Given values from the table
+mse_values = {
+    "ARIMA": 0.251,
+    "SVR": 0.300,
+    "Prophet": 0.280,
+    "XGBoost": 0.220,
+    "LSTM": 0.304,
+    "Hybrid model" : 0.41
+}
+
+mae_values = {
+    "ARIMA": 0.334,
+    "SVR": 0.3651,
+    "Prophet": 0.3528,
+    "XGBoost": 0.3127,
+    "LSTM": 0.3676
+}
+
+rmse_values = {
+    "ARIMA": 0.501,
+    "SVR": 0.5477,
+    "Prophet": 0.5292,
+    "XGBoost": 0.469,
+    "LSTM": 0.5514
+}
+
+# Assuming the mean of actual values is 1 (for a normalized scale)
+y_mean = 1
+
+# Compute R² using the formula: R² = 1 - (MSE / Variance of actual values)
+r2_values = {model: round(1 - (mse / y_mean), 4) for model, mse in mse_values.items()}
+
+# Display the R² scores
+r2_values

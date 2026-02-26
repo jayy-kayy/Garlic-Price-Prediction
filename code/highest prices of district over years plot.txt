@@ -1,0 +1,44 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load dataset
+file_path = "/content/updated_Price_Report.csv"
+df = pd.read_csv(file_path)
+
+# Identify the necessary columns
+year_col = None
+price_col = None
+district_col = None
+
+for col in df.columns:
+    if "year" in col.lower():
+        year_col = col
+    elif "date" in col.lower():
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+        df["Year"] = df[col].dt.year
+        year_col = "Year"
+    if "price" in col.lower() or "rate" in col.lower():
+        price_col = col
+    if "district" in col.lower():
+        district_col = col
+
+if not year_col or not price_col or not district_col:
+    print("Year, price, or district column not found.")
+else:
+    # Aggregate highest price per district per year
+    yearly_district_prices = df.groupby([year_col, district_col])[price_col].max().reset_index()
+
+    # Select only the first 30 districts
+    top_districts = yearly_district_prices[district_col].unique()[:30]
+    yearly_district_prices = yearly_district_prices[yearly_district_prices[district_col].isin(top_districts)]
+
+    # Plot line chart
+    plt.figure(figsize=(14, 7))
+    sns.lineplot(data=yearly_district_prices, x=year_col, y=price_col, hue=district_col, marker="o")
+    plt.xlabel("Year")
+    plt.ylabel("Highest Price")
+    plt.title("Highest Prices by District Over the Years (First 30 Districts)")
+    plt.legend(title="District", bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.xticks(rotation=45)
+    plt.show()

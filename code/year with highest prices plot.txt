@@ -1,0 +1,44 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load dataset
+file_path = "/content/updated_Price_Report.csv"
+df = pd.read_csv(file_path)
+
+# Identify a date or year column
+year_col = None
+for col in df.columns:
+    if "year" in col.lower():
+        year_col = col
+        break
+    elif "date" in col.lower():
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+        df["Year"] = df[col].dt.year
+        year_col = "Year"
+        break
+
+if not year_col:
+    print("No year or date column found.")
+else:
+    # Identify the price column
+    price_col = None
+    for col in df.columns:
+        if "price" in col.lower() or "rate" in col.lower():
+            price_col = col
+            break
+
+    if not price_col:
+        print("No price column found.")
+    else:
+        # Aggregate maximum price by year
+        yearly_prices = df.groupby(year_col)[price_col].max().reset_index()
+
+        # Plot max price trend over the years
+        plt.figure(figsize=(10, 5))
+        sns.barplot(x=yearly_prices[year_col], y=yearly_prices[price_col], palette="magma")
+        plt.xlabel("Year")
+        plt.ylabel("Highest Price")
+        plt.title("Year with the Highest Prices")
+        plt.xticks(rotation=45)
+        plt.show()

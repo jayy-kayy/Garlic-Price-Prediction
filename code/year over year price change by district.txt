@@ -1,0 +1,63 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load dataset
+file_path = "/content/updated_Price_Report_with_Year_Month.csv"
+df = pd.read_csv(file_path)
+
+# Identify the necessary columns
+year_col = None
+price_col = None  # Initialize price_col here
+district_col = None
+
+for col in df.columns:
+    if "year" in col.lower():
+        year_col = col
+    elif "date" in col.lower():
+        # Attempt to convert to datetime, but handle errors
+        try:
+            df[col] = pd.to_datetime(df[col], errors="raise")
+            df["Year"] = df[col].dt.year
+            year_col = "Year"
+        except ValueError:
+            print(f"Column '{col}' could not be converted to datetime. Skipping...")
+
+    # Check for price column after potential datetime conversion
+    if price_col is None and ("price" in col.lower() or "rate" in col.lower() or "modal_price" in col.lower()):  # Added 'modal_price'
+        price_col = col
+    if "district" in col.lower():
+        district_col = col
+
+if not year_col or not price_col or not district_col:
+    print("Year, price, or district column not found.")
+else:
+    # Aggregate highest price per district per year
+    yearly_prices = df.groupby([year_col, district_col])[price_col].max().reset_index()
+
+    # Calculate Year-over-Year (YoY) price change
+    yearly_prices["YoY Change"] = yearly_prices.groupby(district_col)[price_col].pct_change() * 100
+
+    # Remove NaN values (first year for each district will have no YoY change)
+    yearly_prices = yearly_prices.dropna()
+
+    # Select only the first 30 districts for clarity
+    top_districts = yearly_prices[district_col].unique()[:30]
+    yearly_prices = yearly_prices[yearly_prices[district_col].isin(top_districts)]
+
+    # Plot the Year-over-Year Change
+    plt.figure(figsize=(14, 7))
+    sns.barplot(
+        data=yearly_prices,
+        x=year_col,
+        y="YoY Change",
+        hue=district_col,
+        palette=["green" if x > 0 else "red" for x in yearly_prices["YoY Change"]]
+    )
+    plt.axhline(0, color="black", linewidth=1)  # Add a baseline at 0% change
+    plt.xlabel("Year")
+    plt.ylabel("Year-over-Year Price Change (%)")
+    plt.title("Year-over-Year Price Change by District (First 30 Districts)")
+    plt.xticks(rotation=45)
+    plt.legend(title="District", bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.show()

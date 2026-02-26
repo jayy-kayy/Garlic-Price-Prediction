@@ -1,0 +1,25 @@
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+
+# Convert 'Price Date' to datetime format
+df['Price Date'] = pd.to_datetime(df['Price Date'], errors='coerce')
+
+# Encode categorical columns
+categorical_cols = ['District Name', 'Market Name', 'Commodity', 'Variety', 'Grade', 'Month']
+label_encoders = {}
+
+for col in categorical_cols:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+    label_encoders[col] = le
+
+# Normalize numerical columns
+scaler = MinMaxScaler()
+df[['Min Price (Rs./Quintal)', 'Max Price (Rs./Quintal)', 'Modal Price']] = scaler.fit_transform(
+    df[['Min Price (Rs./Quintal)', 'Max Price (Rs./Quintal)', 'Modal Price']])
+
+#drop
+# Drop unnecessary columns
+df.drop(columns=['Sl no.'], inplace=True)
+
+# Check processed data
+df.head()
